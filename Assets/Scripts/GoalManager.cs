@@ -16,6 +16,16 @@ public class GoalManager : MonoBehaviour {
             }
         }
     }
+    public GameObject GetGoalAtFirstIndex()
+    {
+        GameObject result = null;
+
+        if (goals.Count > 0)
+        {
+            result = goals[0];
+        }
+        return result;
+    }
     private void AddGoal(GameObject goal)
     {
         if (!goals.Contains(goal))

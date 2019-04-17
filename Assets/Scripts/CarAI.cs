@@ -61,6 +61,8 @@ public class CarAI : MonoBehaviour {
 
     [SerializeField]
     private float steerTorqueMultiplier = 0.0f;
+    private int currentGoalIndex = 0;
+    private Transform currentGoal;
 
     void Start () {
         initPos = transform.position;
@@ -78,6 +80,16 @@ public class CarAI : MonoBehaviour {
         }
         else
         {
+            if (currentGoal == null)
+            {
+                GameObject tmpObj = gManager.GetGoalAtFirstIndex();
+
+                if (tmpObj != null)
+                {
+                    FoundGoal(tmpObj);
+                }
+            }
+
             timerText.text = (maxTime - (Time.time - timer)).ToString("F2");
             
             CheckForFailures();
@@ -87,7 +99,7 @@ public class CarAI : MonoBehaviour {
                 case CarState.Search:
                     stateText.text = "Searching";
 
-
+                    //Implement basic roaming around functionality
 
                     break;
                 case CarState.Goal:
@@ -156,7 +168,8 @@ public class CarAI : MonoBehaviour {
     {
         if (currentState != CarState.Goal)
         {
-            targetPos = goalObject.transform.position;
+            currentGoal = goalObject.transform;
+            targetPos = currentGoal.position;
             currentState = CarState.Goal;
 
             lastTargetSwitch = Time.time;
@@ -170,7 +183,8 @@ public class CarAI : MonoBehaviour {
                 if (newDistance < distToGoal)
                 {
                     Debug.Log("Switched targets!");
-                    targetPos = goalObject.transform.position;
+                    currentGoal = goalObject.transform;
+                    targetPos = currentGoal.position;
                     currentState = CarState.Goal;
                 }
 
