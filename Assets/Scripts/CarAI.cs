@@ -47,20 +47,7 @@ public class CarAI : MonoBehaviour {
     private float distToGoal = 0;
     private float lastTargetSwitch = 0;
     private float targetSwitchTimer = 10;
-
-    private float distanceToPathObjective = 0.0f;
-
-    private float steerAngleThreshold = 9;
-    private float forwardDistanceThreshold = 0.5f;
-
-    private float minForwardTorqueMultiplier = 0.5f;
-    private float minSteerTorqueMultiplier = 0.5f;
-
-    [SerializeField]
-    private float forwardTorqueMultiplier = 0.0f;
-
-    [SerializeField]
-    private float steerTorqueMultiplier = 0.0f;
+    
     private int currentGoalIndex = 0;
     private Transform currentGoal;
 
@@ -105,40 +92,52 @@ public class CarAI : MonoBehaviour {
                 case CarState.Goal:
                     stateText.text = "Moving to goal";
 
+                    // Get collision free path from the cars proximity sensor
                     pathPos = proxSensor.GetOptimalPathToPosition(transform.position, targetPos);
 
+                    // DEBUG CODE: Set the visualizer for the current arbitrary path
                     followBall.position = pathPos;
 
                     distToGoal = Vector3.Distance(transform.position, targetPos);
                     angleToGoal = Vector3.Angle(pathPos - transform.position, transform.forward);
-
-                    distanceToPathObjective = Vector3.Distance(transform.position, pathPos);
-
-                    forwardTorqueMultiplier = Mathf.Clamp((distanceToPathObjective - forwardDistanceThreshold) / forwardDistanceThreshold, minForwardTorqueMultiplier, 1);
-
+                    
                     if (angleToGoal > angleTreshold)
                     {
                         steerPos = transform.InverseTransformPoint(pathPos);
-                        steerTorqueMultiplier = Mathf.Clamp((angleToGoal - steerAngleThreshold) / steerAngleThreshold, minSteerTorqueMultiplier, 1);
-                        //Right
+                        // Steer Right
                         if (steerPos.x > 0.2f)
                         {
-                            carMotor.TurnRight(1);
+                            carMotor.TurnRight();
                         }
-                        //Left
+                        // Steer Left
                         else if (steerPos.x < -0.2f)
                         {
-                            carMotor.TurnLeft(1);
+                            carMotor.TurnLeft();
                         }
                         else
-                        {
-                            carMotor.GoForward(forwardTorqueMultiplier);
+                        {   // Go Forward
+                            if(steerPos.z > 0)
+                            {
+                                carMotor.GoForward();
+                            }
+                            else
+                            {
+                                //I If the object is behind the car, Steer Right or Left accordingly
+                                if( steerPos.x >= 0f)
+                                {
+                                    carMotor.TurnRight();
+                                }
+                                else
+                                {
+                                    carMotor.TurnLeft();
+                                }
+                            }
                         }
                     }
                     else
                     {
-                        //Move Forward
-                        carMotor.GoForward(forwardTorqueMultiplier);
+                        // Go Forward
+                        carMotor.GoForward();
                     }
 
                     break;
@@ -149,6 +148,7 @@ public class CarAI : MonoBehaviour {
         }
 	}
 
+    // Check if the car is upside down
     private void CheckForFailures()
     {
         //if (Time.time - lastFailCheck >= failCheckInterval)
@@ -164,6 +164,7 @@ public class CarAI : MonoBehaviour {
         //}
     }
 
+    // Called when the camera finds a goal object
     public void FoundGoal(GameObject goalObject)
     {
         if (currentState != CarState.Goal)
@@ -193,6 +194,7 @@ public class CarAI : MonoBehaviour {
         }
     }
 
+    // Check if we reached the goal object
     private void OnTriggerEnter(Collider other)
     {
         if (other.tag == "Goal") //If the collided object is a goal object...

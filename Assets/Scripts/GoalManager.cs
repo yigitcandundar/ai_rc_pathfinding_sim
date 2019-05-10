@@ -16,6 +16,7 @@ public class GoalManager : MonoBehaviour {
             }
         }
     }
+    // Get the goal object that is at the top of the list
     public GameObject GetGoalAtFirstIndex()
     {
         GameObject result = null;
@@ -26,6 +27,7 @@ public class GoalManager : MonoBehaviour {
         }
         return result;
     }
+    // Add a new goal object to the list
     private void AddGoal(GameObject goal)
     {
         if (!goals.Contains(goal))
@@ -33,6 +35,7 @@ public class GoalManager : MonoBehaviour {
             goals.Add(goal);
         }
     }
+    // Remove a goal object from the list
     public void RemoveGoal(GameObject goal)
     {
         if (goals.Contains(goal))

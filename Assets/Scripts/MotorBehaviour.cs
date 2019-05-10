@@ -34,18 +34,13 @@ public class MotorBehaviour : MonoBehaviour
     [SerializeField]
     private float rightTorque = 0f;
 
-
-    [SerializeField]
-    private float acceleration = 10f;
-    [SerializeField]
-    private float deceleration = 20f;
     
     private bool forwardInput = false;
     private bool leftInput = false;
     private bool rightInput = false;
     private bool backInput = false;
     
-
+    // Apply the movement inputs to the wheels of the car
     private void Update()
     {
         forwardImage.color = Color.white;
@@ -63,9 +58,6 @@ public class MotorBehaviour : MonoBehaviour
 
                 leftTorque = torqueLimit;
                 rightTorque = torqueLimit;
-
-                //leftTorque = Mathf.Clamp(leftTorque + acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
-                //rightTorque = Mathf.Clamp(rightTorque + acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
             }
             else if (leftInput)
             {
@@ -73,9 +65,6 @@ public class MotorBehaviour : MonoBehaviour
 
                 leftTorque = -torqueLimit;
                 rightTorque = torqueLimit;
-
-                //leftTorque = Mathf.Clamp(leftTorque - acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
-                //rightTorque = Mathf.Clamp(rightTorque + acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
             }
             else if (rightInput)
             {
@@ -83,9 +72,6 @@ public class MotorBehaviour : MonoBehaviour
 
                 leftTorque = torqueLimit;
                 rightTorque = -torqueLimit;
-
-                //leftTorque = Mathf.Clamp(leftTorque + acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
-                //rightTorque = Mathf.Clamp(rightTorque - acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
             }
             else if (backInput)
             {
@@ -93,60 +79,23 @@ public class MotorBehaviour : MonoBehaviour
 
                 leftTorque = -torqueLimit;
                 rightTorque = -torqueLimit;
-
-                //leftTorque = Mathf.Clamp(leftTorque - acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
-                //rightTorque = Mathf.Clamp(rightTorque - acceleration * Time.deltaTime, -torqueLimit, torqueLimit);
             }
             else
             {
                 leftTorque = 0;
                 rightTorque = 0;
-
-                //if (leftTorque < 0)
-                //{
-                //    leftTorque = Mathf.Clamp(leftTorque + deceleration * Time.deltaTime, -torqueLimit, 0);
-                //}
-                //else
-                //{
-                //    leftTorque = Mathf.Clamp(leftTorque - deceleration * Time.deltaTime, 0, torqueLimit);
-                //}
-                //if (rightTorque < 0)
-                //{
-                //    rightTorque = Mathf.Clamp(rightTorque + deceleration * Time.deltaTime, -torqueLimit, 0);
-                //}
-                //else
-                //{
-                //    rightTorque = Mathf.Clamp(rightTorque - deceleration * Time.deltaTime, 0, torqueLimit);
-                //}
             }
         }
         else
         {
             leftTorque = 0;
             rightTorque = 0;
-
-            //if (leftTorque < 0)
-            //{
-            //    leftTorque = Mathf.Clamp(leftTorque + deceleration * Time.deltaTime, -torqueLimit, 0);
-            //}
-            //else
-            //{
-            //    leftTorque = Mathf.Clamp(leftTorque - deceleration * Time.deltaTime, 0, torqueLimit);
-            //}
-            //if(rightTorque < 0)
-            //{
-            //    rightTorque = Mathf.Clamp(rightTorque + deceleration * Time.deltaTime, -torqueLimit, 0);
-            //}
-            //else
-            //{
-            //    rightTorque = Mathf.Clamp(rightTorque - deceleration * Time.deltaTime, 0, torqueLimit);
-            //}
         }
 
         wheel_left.motorTorque = leftTorque;
         wheel_right.motorTorque = rightTorque;
 
-        // Update wheel rotations
+        // Update wheel rotations (VISUAL)
         wheel_left.GetWorldPose(out wheel_pos, out left_rotation);
         wheel_right.GetWorldPose(out wheel_pos, out right_rotation);
 
@@ -157,18 +106,17 @@ public class MotorBehaviour : MonoBehaviour
         leftInput = false;
         rightInput = false;
         backInput = false;
-
     }
 
-    public void TurnLeft(float multiplier)
+    public void TurnLeft()
     {
         leftInput = true;
     }
-    public void TurnRight(float multiplier)
+    public void TurnRight()
     {
         rightInput = true;
     }
-    public void GoForward(float multiplier)
+    public void GoForward()
     {
         forwardInput = true;
     }
