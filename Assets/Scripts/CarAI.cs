@@ -50,6 +50,20 @@ public class CarAI : MonoBehaviour {
     
     private int currentGoalIndex = 0;
     private Transform currentGoal;
+    [SerializeField]
+    private int wiggleCount = 0;
+    private int wiggleTarget = 10;
+
+    private enum LastInputType
+    {
+        forward,
+        backward,
+        right,
+        left,
+        brake
+    }
+
+    private LastInputType lastInput = LastInputType.forward;
 
     void Start () {
         initPos = transform.position;
@@ -100,46 +114,97 @@ public class CarAI : MonoBehaviour {
 
                     distToGoal = Vector3.Distance(transform.position, targetPos);
                     angleToGoal = Vector3.Angle(pathPos - transform.position, transform.forward);
-                    
-                    if (angleToGoal > angleTreshold)
+
+                    if (carMotor.IsAboveBrakeVelocity() && proxSensor.HasObjectInFront(transform))
                     {
-                        steerPos = transform.InverseTransformPoint(pathPos);
-                        // Steer Right
-                        if (steerPos.x > 0.2f)
-                        {
-                            carMotor.TurnRight();
-                        }
-                        // Steer Left
-                        else if (steerPos.x < -0.2f)
-                        {
-                            carMotor.TurnLeft();
-                        }
-                        else
-                        {   // Go Forward
-                            if(steerPos.z > 0)
-                            {
-                                carMotor.GoForward();
-                            }
-                            else
-                            {
-                                //I If the object is behind the car, Steer Right or Left accordingly
-                                if( steerPos.x >= 0f)
-                                {
-                                    carMotor.TurnRight();
-                                }
-                                else
-                                {
-                                    carMotor.TurnLeft();
-                                }
-                            }
-                        }
+                        Debug.Log("BRAKING");
+                        lastInput = LastInputType.brake;
+                        carMotor.Brake();
                     }
                     else
                     {
-                        // Go Forward
-                        carMotor.GoForward();
-                    }
+                        if (angleToGoal > angleTreshold)
+                        {
+                            steerPos = transform.InverseTransformPoint(pathPos);
+                            
+                            if (steerPos.z > 0)
+                            {
+                                if (steerPos.x > 0.2f)
+                                {
+                                    // Steer Right
+                                    CheckForWiggles(LastInputType.right);
+                                    lastInput = LastInputType.right;
 
+                                    carMotor.TurnRight();
+                                }
+                                else if (steerPos.x < -0.2f)
+                                {
+                                    // Steer Left
+                                    CheckForWiggles(LastInputType.left);
+                                    lastInput = LastInputType.left;
+                                    carMotor.TurnLeft();
+                                }
+                                else
+                                {   // Go Forward
+                                    CheckForWiggles(LastInputType.forward);
+                                    lastInput = LastInputType.forward;
+                                    carMotor.GoForward();
+                                }
+                            }
+                            else
+                            {
+                                // If the object is behind the car, Steer Right or Left accordingly
+                                if (wiggleCount < wiggleTarget)
+                                {
+                                    if (steerPos.x >= 0f)
+                                    {
+                                        CheckForWiggles(LastInputType.right);
+                                        lastInput = LastInputType.right;
+                                        carMotor.TurnRight();
+                                    }
+                                    else
+                                    {
+                                        CheckForWiggles(LastInputType.left);
+                                        lastInput = LastInputType.left;
+                                        carMotor.TurnLeft();
+                                    }
+                                }
+                                else
+                                {
+                                    //Try to escape from local minima
+                                    if (lastInput == LastInputType.right)
+                                    {
+                                        if (!proxSensor.HasObjectInFront(transform))
+                                        {
+                                            carMotor.GoForward();
+                                        }
+                                        else
+                                        {
+                                            carMotor.TurnLeft();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (!proxSensor.HasObjectInFront(transform))
+                                        {
+                                            carMotor.GoForward();
+                                        }
+                                        else
+                                        {
+                                            carMotor.TurnLeft();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Go Forward
+                            CheckForWiggles(LastInputType.forward);
+                            lastInput = LastInputType.forward;
+                            carMotor.GoForward();
+                        }
+                    }
                     break;
                 case CarState.Fail:
                     stateText.text = "Failed";
@@ -162,6 +227,53 @@ public class CarAI : MonoBehaviour {
 
         //    lastFailCheck = Time.time;
         //}
+    }
+
+    private void CheckForWiggles(LastInputType currentInput)
+    {
+        switch (currentInput)
+        {
+            case LastInputType.forward:
+                if (lastInput == LastInputType.backward)
+                {
+                    wiggleCount++;
+                }
+                else if (lastInput != LastInputType.forward)
+                {
+                    wiggleCount = 0;
+                }
+                break;
+            case LastInputType.backward:
+                if (lastInput == LastInputType.forward)
+                {
+                    wiggleCount++;
+                }
+                else if (lastInput != LastInputType.backward)
+                {
+                    wiggleCount = 0;
+                }
+                break;
+            case LastInputType.left:
+                if (lastInput == LastInputType.right)
+                {
+                    wiggleCount++;
+                }
+                else if (lastInput != LastInputType.left)
+                {
+                    wiggleCount = 0;
+                }
+                break;
+            case LastInputType.right:
+                if (lastInput == LastInputType.left)
+                {
+                    wiggleCount++;
+                }
+                else if (lastInput != LastInputType.right)
+                {
+                    wiggleCount = 0;
+                }
+                break;
+        }
     }
 
     // Called when the camera finds a goal object
@@ -205,6 +317,13 @@ public class CarAI : MonoBehaviour {
             pointsText.text = points.ToString(); //Update points display
 
             currentState = CarState.Search; //Return to search state
+        }
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if(collision.gameObject.tag != "Goal" && collision.gameObject.name != "Terrain")
+        {
+            Debug.Log("COLLIDED WITH " + collision.gameObject.name);
         }
     }
 }

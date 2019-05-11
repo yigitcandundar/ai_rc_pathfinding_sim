@@ -9,7 +9,11 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
     // List of detected objects inside the proximity
     private List<Collider> collisions = new List<Collider>();
-    
+    [SerializeField]
+    private Vector3 directionToGoal;
+    [SerializeField]
+    private Vector3 directionSum;
+
     // Detect objects in proximity
     private void OnTriggerEnter(Collider other)
     {
@@ -23,7 +27,7 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
     public Vector3 GetOptimalPathToPosition(Vector3 fromPosition,Vector3 targetPosition)
     {
         // Direction from the current position of the car to its current goal
-        Vector3 directionToGoal = (targetPosition - fromPosition).normalized;
+        directionToGoal = (targetPosition - fromPosition).normalized;
 
         // Direction away from the current position and current proximity objects
         Vector3 directionFromCollision = Vector3.zero;
@@ -35,7 +39,7 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
         float distanceSum = 0.0f;
 
         // The final sum of directions from proximity objects
-        Vector3 directionSum = Vector3.zero;
+        directionSum = Vector3.zero;
 
         // The average distance to proximity collisions
         float avgDistanceToCollision = minDistance;
@@ -64,12 +68,12 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
                 directionFromCollision *= Mathf.Clamp(minDistance - Mathf.Clamp(distanceToCollision, 0, minDistance), 0.5f, minDistance);
                 directionSum += directionFromCollision;
 
-                Debug.DrawRay(fromPosition, (closestPoint - fromPosition), Color.red);
+                //Debug.DrawRay(fromPosition, (closestPoint - fromPosition), Color.red);
             }
             else
             {
                 // If the distance to object is safe, just draw a green line to it on the editor window (DEBUG)
-                Debug.DrawRay(fromPosition, (closestPoint - fromPosition),Color.green);
+                //Debug.DrawRay(fromPosition, (closestPoint - fromPosition),Color.green);
             }
         }
 
@@ -87,6 +91,60 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
         return fromPosition + (directionToGoal) + (directionSum);
     }
 
+    public bool HasObjectInFront(Transform fromTransform)
+    {
+        bool result = false;
+        RaycastHit hit;
+        if (Physics.Raycast(new Ray(fromTransform.position, fromTransform.forward), out hit, minDistance))
+        {
+            if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
+            {
+                Debug.DrawRay(fromTransform.position, fromTransform.forward * minDistance, Color.green);
+                result = true;
+            }
+        }
+        else
+        {
+            Vector3 forwardLeft = new Vector3(fromTransform.forward.x - 0.4f, fromTransform.forward.y, fromTransform.forward.z);
+            Vector3 forwardRight = new Vector3(fromTransform.forward.x + 0.4f, fromTransform.forward.y, fromTransform.forward.z);
+
+            if (Physics.Raycast(new Ray(fromTransform.position, forwardLeft), out hit, minDistance))
+            {
+                if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
+                {
+                    Debug.DrawRay(fromTransform.position, forwardLeft * minDistance, Color.green);
+                    result = true;
+                }
+            }
+            if (Physics.Raycast(new Ray(fromTransform.position, forwardRight), out hit, minDistance))
+            {
+                if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
+                {
+                    Debug.DrawRay(fromTransform.position, forwardRight * minDistance, Color.green);
+                    result = true;
+                }
+            }
+
+            foreach (Collider collider in collisions)
+            {
+                Vector3 closestPoint = collider.ClosestPoint(fromTransform.position);
+                Vector3 dir = (closestPoint - fromTransform.position).normalized;
+                Vector3 relativePosition = fromTransform.InverseTransformPoint(fromTransform.position + dir);
+
+                if (relativePosition.x < 0.4f && relativePosition.x > -0.4f)
+                {
+                    Debug.DrawRay(fromTransform.position, (closestPoint - fromTransform.position), Color.green);
+                    result = true;
+                }
+                else
+                {
+                    Debug.DrawRay(fromTransform.position, (closestPoint - fromTransform.position), Color.red);
+                }
+            }
+        }
+
+        return result;
+    }
     // Called when a proximity object gets out of the proximity area
     private void OnTriggerExit(Collider other)
     {

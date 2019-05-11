@@ -19,7 +19,8 @@ public class MotorBehaviour : MonoBehaviour
     public Image backImage;
     public Image leftImage;
     public Image rightImage;
-    
+    public Image brakeImage;
+
     private Vector3 wheel_pos = new Vector3();
     private Quaternion left_rotation = new Quaternion();
     private Quaternion right_rotation = new Quaternion();
@@ -28,6 +29,7 @@ public class MotorBehaviour : MonoBehaviour
     private float currentVelocity = 0f;
     [SerializeField]
     private float maxVelocity = 3f;
+    private float brakeVelocity = .5f;
 
     [SerializeField]
     private float leftTorque = 0f;
@@ -39,10 +41,13 @@ public class MotorBehaviour : MonoBehaviour
     private bool leftInput = false;
     private bool rightInput = false;
     private bool backInput = false;
-    
+    private bool brakeInput = false;
+
+    private bool manualControl = false;
     // Apply the movement inputs to the wheels of the car
     private void Update()
     {
+        brakeImage.color = Color.white;
         forwardImage.color = Color.white;
         backImage.color = Color.white;
         leftImage.color = Color.white;
@@ -50,35 +55,99 @@ public class MotorBehaviour : MonoBehaviour
 
         currentVelocity = mainBody.velocity.magnitude;
 
-        if (currentVelocity < maxVelocity)
+        if (manualControl)
         {
-            if (forwardInput)
+            if (Input.GetKey(KeyCode.Space))
             {
-                forwardImage.color = Color.green;
+                brakeImage.color = Color.green;
 
-                leftTorque = torqueLimit;
-                rightTorque = torqueLimit;
+                leftTorque = 0;
+                rightTorque = 0;
             }
-            else if (leftInput)
+            else
             {
-                leftImage.color = Color.green;
+                if (Input.GetKey(KeyCode.W))
+                {
+                    forwardImage.color = Color.green;
 
-                leftTorque = -torqueLimit;
-                rightTorque = torqueLimit;
+                    leftTorque = torqueLimit;
+                    rightTorque = torqueLimit;
+                }
+                else if (Input.GetKey(KeyCode.A))
+                {
+                    leftImage.color = Color.green;
+
+                    leftTorque = -torqueLimit;
+                    rightTorque = torqueLimit;
+                }
+                else if (Input.GetKey(KeyCode.D))
+                {
+                    rightImage.color = Color.green;
+
+                    leftTorque = torqueLimit;
+                    rightTorque = -torqueLimit;
+                }
+                else if (Input.GetKey(KeyCode.S))
+                {
+                    backImage.color = Color.green;
+
+                    leftTorque = -torqueLimit;
+                    rightTorque = -torqueLimit;
+                }
+                else
+                {
+                    leftTorque = 0;
+                    rightTorque = 0;
+                }
             }
-            else if (rightInput)
+        }
+        else
+        {
+            if (currentVelocity < maxVelocity)
             {
-                rightImage.color = Color.green;
+                if (brakeInput)
+                {
+                    brakeImage.color = Color.green;
 
-                leftTorque = torqueLimit;
-                rightTorque = -torqueLimit;
-            }
-            else if (backInput)
-            {
-                backImage.color = Color.green;
+                    leftTorque = 0;
+                    rightTorque = 0;
+                }
+                else
+                {
+                    if (forwardInput)
+                    {
+                        forwardImage.color = Color.green;
 
-                leftTorque = -torqueLimit;
-                rightTorque = -torqueLimit;
+                        leftTorque = torqueLimit;
+                        rightTorque = torqueLimit;
+                    }
+                    else if (leftInput)
+                    {
+                        leftImage.color = Color.green;
+
+                        leftTorque = -torqueLimit;
+                        rightTorque = torqueLimit;
+                    }
+                    else if (rightInput)
+                    {
+                        rightImage.color = Color.green;
+
+                        leftTorque = torqueLimit;
+                        rightTorque = -torqueLimit;
+                    }
+                    else if (backInput)
+                    {
+                        backImage.color = Color.green;
+
+                        leftTorque = -torqueLimit;
+                        rightTorque = -torqueLimit;
+                    }
+                    else
+                    {
+                        leftTorque = 0;
+                        rightTorque = 0;
+                    }
+                }
             }
             else
             {
@@ -86,12 +155,6 @@ public class MotorBehaviour : MonoBehaviour
                 rightTorque = 0;
             }
         }
-        else
-        {
-            leftTorque = 0;
-            rightTorque = 0;
-        }
-
         wheel_left.motorTorque = leftTorque;
         wheel_right.motorTorque = rightTorque;
 
@@ -102,12 +165,16 @@ public class MotorBehaviour : MonoBehaviour
         wheel_model_left.rotation = left_rotation;
         wheel_model_right.rotation = right_rotation;
 
+        brakeInput = false;
         forwardInput = false;
         leftInput = false;
         rightInput = false;
         backInput = false;
     }
-
+    public bool IsAboveBrakeVelocity()
+    {
+        return currentVelocity > brakeVelocity;
+    }
     public void TurnLeft()
     {
         leftInput = true;
@@ -123,5 +190,9 @@ public class MotorBehaviour : MonoBehaviour
     public void GoBackward()
     {
         backInput = true;
+    }
+    public void Brake()
+    {
+        brakeInput = true;
     }
 }
