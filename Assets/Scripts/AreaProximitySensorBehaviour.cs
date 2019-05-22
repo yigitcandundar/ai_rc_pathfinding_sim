@@ -6,13 +6,23 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
     // Minimum distance allowed from a proximity object
     private float minDistance = 4f;
+    private float proxSensorRadius = 7f;
 
     // List of detected objects inside the proximity
     private List<Collider> collisions = new List<Collider>();
+    private List<Vector3> minimaPositions = new List<Vector3>();
+
     [SerializeField]
     private Vector3 directionToGoal;
     [SerializeField]
     private Vector3 directionSum;
+    [SerializeField]
+    private Vector3 minimaDirSum;
+    [SerializeField]
+    float avgDistanceToCollision = 0;
+
+    // The radius of the frontal collision check cone
+    private float frontDetectionConeRadius = 0.7f;
 
     // Detect objects in proximity
     private void OnTriggerEnter(Collider other)
@@ -23,6 +33,17 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
             collisions.Add(other);
         }
     }
+
+    // Called when a proximity object gets out of the proximity area
+    private void OnTriggerExit(Collider other)
+    {
+        //If the detected object is not ourself or the goal object, remove it from the list of current collisions
+        if (other.tag != "Goal" && other.tag != "Player")
+        {
+            collisions.Remove(other);
+        }
+    }
+
     // Calculate collision free path using Potential Field inspired logic and return the arbitrary target position
     public Vector3 GetOptimalPathToPosition(Vector3 fromPosition,Vector3 targetPosition)
     {
@@ -37,12 +58,13 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
         // The float sum of distance
         float distanceSum = 0.0f;
+        int criticalCollisionsCount = 0;
 
         // The final sum of directions from proximity objects
         directionSum = Vector3.zero;
-
+        minimaDirSum = Vector3.zero;
         // The average distance to proximity collisions
-        float avgDistanceToCollision = minDistance;
+        avgDistanceToCollision = minDistance;
 
         //DEBUG CODE: Draw rays to the goal in the editor window
         Debug.DrawRay(fromPosition, (targetPosition - fromPosition));
@@ -52,105 +74,172 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
         {
             // Find the closest point to the proximity object from the cars position
             Vector3 closestPoint = collider.ClosestPoint(fromPosition);
-
-            // Find the inverse of the direction to the object
-            directionFromCollision = -(closestPoint - fromPosition).normalized;
-
+            
             // Calculate distance to the proximity object
             float distanceToCollision = Vector3.Distance(fromPosition, closestPoint);
-
-            // Add the new distance to the distance sum
-            distanceSum += distanceToCollision;
             
             // If the distance to current proximity object is dangerously close, amplify the direction and contribute to the actual path calculation
             if (distanceToCollision <= minDistance)
             {
+                criticalCollisionsCount++;
+                // Find the inverse of the direction to the object
+                directionFromCollision = -(closestPoint - fromPosition).normalized;
+
+                // Add the new distance to the distance sum
+                distanceSum += distanceToCollision;
+
+                //Find the appropriate direction away from the obstacle
                 directionFromCollision *= Mathf.Clamp(minDistance - Mathf.Clamp(distanceToCollision, 0, minDistance), 0.5f, minDistance);
                 directionSum += directionFromCollision;
 
-                //Debug.DrawRay(fromPosition, (closestPoint - fromPosition), Color.red);
+                Debug.DrawRay(fromPosition, (closestPoint - fromPosition), Color.red);
             }
             else
             {
                 // If the distance to object is safe, just draw a green line to it on the editor window (DEBUG)
-                //Debug.DrawRay(fromPosition, (closestPoint - fromPosition),Color.green);
+                Debug.DrawRay(fromPosition, (closestPoint - fromPosition),Color.green);
+            }
+        }
+
+        //Check if a recorder local minima is close by
+        foreach(Vector3 localMinima in minimaPositions)
+        {
+            float distanceToLocalMinima = Vector3.Distance(fromPosition, localMinima);
+
+            Vector3 dirFromMinimaToPos = localMinima;
+
+            if (distanceToLocalMinima > minDistance)
+            {
+                dirFromMinimaToPos += minDistance * (fromPosition - localMinima).normalized;
+                distanceToLocalMinima = Vector3.Distance(fromPosition, dirFromMinimaToPos);
+
+                if (distanceToLocalMinima < proxSensorRadius)
+                {
+                    directionFromCollision = -(dirFromMinimaToPos - fromPosition).normalized;
+                    directionFromCollision *= Mathf.Clamp(proxSensorRadius - Mathf.Clamp(distanceToLocalMinima, 0, proxSensorRadius), 0.5f, proxSensorRadius);
+
+                    minimaDirSum += directionFromCollision;
+
+                    Debug.DrawRay(fromPosition, (dirFromMinimaToPos - fromPosition), Color.yellow);
+                }
+            }
+            else
+            {
+                if (distanceToLocalMinima < proxSensorRadius)
+                {
+                    directionFromCollision = -(dirFromMinimaToPos - fromPosition).normalized * minDistance;
+
+                    directionSum += directionFromCollision;
+
+                    Debug.DrawRay(fromPosition, (dirFromMinimaToPos - fromPosition), Color.yellow);
+                }
             }
         }
 
         // Check for division by 0 cases
-        if (collisions.Count > 0)
+        if (criticalCollisionsCount > 0)
         {
             // Calculate average distance to collisions
-            avgDistanceToCollision = distanceSum / collisions.Count;
+            avgDistanceToCollision = (distanceSum / criticalCollisionsCount) / minDistance;
         }
 
         // Calculate the direction to the goal with average distance to collision to adjust its magnitude
-        directionToGoal *= Mathf.Clamp(avgDistanceToCollision, 1, minDistance);
+        directionSum *= Mathf.Clamp(avgDistanceToCollision, 1, minDistance);
 
         // Return the collision free path using direction to goal and the direction away from proximity objects
-        return fromPosition + (directionToGoal) + (directionSum);
+        return fromPosition + (2 * directionToGoal) + directionSum + minimaDirSum;
     }
 
+    //Returns true if there is an object in front of the car (Works for directly in front and frontal cone area proximity)
     public bool HasObjectInFront(Transform fromTransform)
     {
         bool result = false;
         RaycastHit hit;
-        if (Physics.Raycast(new Ray(fromTransform.position, fromTransform.forward), out hit, minDistance))
+        int layerMask = 1 << 9;
+        layerMask = ~layerMask;
+
+        //Check if there is something directly in front of the car
+        if (Physics.Raycast(new Ray(fromTransform.position, fromTransform.forward), out hit, minDistance,layerMask,QueryTriggerInteraction.UseGlobal))
         {
             if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
             {
-                Debug.DrawRay(fromTransform.position, fromTransform.forward * minDistance, Color.green);
+                Debug.DrawRay(fromTransform.position, fromTransform.forward * minDistance, Color.red);
                 result = true;
             }
         }
-        else
+        else //Check if there is something to the sides of the car
         {
-            Vector3 forwardLeft = new Vector3(fromTransform.forward.x - 0.4f, fromTransform.forward.y, fromTransform.forward.z);
-            Vector3 forwardRight = new Vector3(fromTransform.forward.x + 0.4f, fromTransform.forward.y, fromTransform.forward.z);
+            Vector3 forwardLeft = new Vector3(fromTransform.forward.x - frontDetectionConeRadius, fromTransform.forward.y, fromTransform.forward.z);
+            Vector3 forwardRight = new Vector3(fromTransform.forward.x + frontDetectionConeRadius, fromTransform.forward.y, fromTransform.forward.z);
 
-            if (Physics.Raycast(new Ray(fromTransform.position, forwardLeft), out hit, minDistance))
+            //Check the leftmost side of the frontal cone
+            if (Physics.Raycast(new Ray(fromTransform.position, forwardLeft), out hit, minDistance, layerMask, QueryTriggerInteraction.UseGlobal))
             {
                 if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
                 {
-                    Debug.DrawRay(fromTransform.position, forwardLeft * minDistance, Color.green);
+                    Debug.DrawRay(fromTransform.position, forwardLeft * minDistance, Color.red);
                     result = true;
                 }
             }
-            if (Physics.Raycast(new Ray(fromTransform.position, forwardRight), out hit, minDistance))
+            //Check the rightmost side of the frontal cone
+            if (Physics.Raycast(new Ray(fromTransform.position, forwardRight), out hit, minDistance, layerMask, QueryTriggerInteraction.UseGlobal))
             {
                 if (hit.collider.tag != "Player" && hit.collider.tag != "Goal")
                 {
-                    Debug.DrawRay(fromTransform.position, forwardRight * minDistance, Color.green);
+                    Debug.DrawRay(fromTransform.position, forwardRight * minDistance, Color.red);
                     result = true;
                 }
             }
 
+            //Try and see if the proximity object is inside the frontal cone range
             foreach (Collider collider in collisions)
             {
                 Vector3 closestPoint = collider.ClosestPoint(fromTransform.position);
                 Vector3 dir = (closestPoint - fromTransform.position).normalized;
                 Vector3 relativePosition = fromTransform.InverseTransformPoint(fromTransform.position + dir);
 
-                if (relativePosition.x < 0.4f && relativePosition.x > -0.4f)
+                if (relativePosition.z > 0)
                 {
-                    Debug.DrawRay(fromTransform.position, (closestPoint - fromTransform.position), Color.green);
-                    result = true;
-                }
-                else
-                {
-                    Debug.DrawRay(fromTransform.position, (closestPoint - fromTransform.position), Color.red);
+                    if (relativePosition.x < frontDetectionConeRadius && relativePosition.x > -frontDetectionConeRadius)
+                    {
+                        Debug.DrawRay(fromTransform.position, (closestPoint - fromTransform.position), Color.red);
+                        result = true;
+                    }
                 }
             }
         }
 
         return result;
     }
-    // Called when a proximity object gets out of the proximity area
-    private void OnTriggerExit(Collider other)
+    public bool HasObjectInCloseProximity(Vector3 fromPosition)
     {
-        if (other.tag != "Goal" && other.tag != "Player")
+        if (collisions.Count >= 3)
         {
-            collisions.Remove(other);
+            return true;
         }
+        else
+        {
+            foreach (Collider collider in collisions)
+            {
+                // Find the closest point to the proximity object from the cars position
+                Vector3 closestPoint = collider.ClosestPoint(fromPosition);
+
+                // Calculate distance to the proximity object
+                float distanceToCollision = Vector3.Distance(fromPosition, closestPoint);
+
+                // If the distance to current proximity object is dangerously close, amplify the direction and contribute to the actual path calculation
+                if (distanceToCollision <= minDistance)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public void RecordLocalMinimaAtPosition(Vector3 localMinimaPosition)
+    {
+        minimaPositions.Add(localMinimaPosition);
     }
 }

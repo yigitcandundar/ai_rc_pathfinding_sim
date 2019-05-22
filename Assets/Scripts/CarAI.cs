@@ -8,13 +8,13 @@ public class CarAI : MonoBehaviour {
 
     enum CarState
     {
-        Search,
-        Goal,
-        Fail
+        Idle,
+        Goal
     }
     public Transform followBall;
     public Text stateText;
     public Text pointsText;
+    public Text collisionsText;
     public Text timerText;
 
     public MotorBehaviour carMotor;
@@ -26,13 +26,11 @@ public class CarAI : MonoBehaviour {
     private float mapSize = 500;
 
     private Rigidbody rBody;
+    
+    private CarState currentState = CarState.Idle;
 
-    private float lastFailCheck = 0;
-    private float failCheckInterval = 5; //In seconds
-
-    private CarState currentState = CarState.Search;
-
-    private float points = 0;
+    private int points = 0;
+    private int collisions = 0;
     private float timer = 0;
     private float maxTime = 300;
 
@@ -53,6 +51,10 @@ public class CarAI : MonoBehaviour {
     [SerializeField]
     private int wiggleCount = 0;
     private int wiggleTarget = 10;
+    private bool stopTimer = false;
+
+    private bool collectionComplete = false;
+    private bool ranOutOfTime = false;
 
     private enum LastInputType
     {
@@ -68,65 +70,74 @@ public class CarAI : MonoBehaviour {
     void Start () {
         initPos = transform.position;
         rBody = GetComponent<Rigidbody>();
-        lastFailCheck = Time.time;
         timer = Time.time;
 	}
-	
-	void Update () {
 
-        if (Time.time - timer >= maxTime)
+    void Update()
+    {
+        if (currentGoal == null)
         {
-            timerText.text = "0";
-            stateText.text = "Simulation finished!";
-        }
-        else
-        {
-            if (currentGoal == null)
+            GameObject tmpObj = gManager.GetGoalAtFirstIndex();
+
+            if (tmpObj != null)
             {
-                GameObject tmpObj = gManager.GetGoalAtFirstIndex();
-
-                if (tmpObj != null)
-                {
-                    FoundGoal(tmpObj);
-                }
+                currentGoal = tmpObj.transform;
+                targetPos = currentGoal.position;
+                currentState = CarState.Goal;
             }
-
-            timerText.text = (maxTime - (Time.time - timer)).ToString("F2");
-            
-            CheckForFailures();
-
-            switch (currentState)
+            else
             {
-                case CarState.Search:
-                    stateText.text = "Searching";
+                stopTimer = true;
+                collectionComplete = true;
+                ranOutOfTime = false;
+                currentState = CarState.Idle;
+            }
+        }
 
-                    //Implement basic roaming around functionality
+        if (!stopTimer)
+        {
+            if (Time.time - timer >= maxTime)
+            {
+                timerText.text = "0";
+                collectionComplete = false;
+                ranOutOfTime = true;
+                currentState = CarState.Idle;
+            }
+            else
+            {
+                timerText.text = (maxTime - (Time.time - timer)).ToString("F2");
+            }
+        }
+        
+        switch (currentState)
+        {
+            case CarState.Goal:
+                stateText.text = "Moving to goal";
 
-                    break;
-                case CarState.Goal:
-                    stateText.text = "Moving to goal";
+                // Get collision free path from the cars proximity sensor
+                pathPos = proxSensor.GetOptimalPathToPosition(transform.position, targetPos);
 
-                    // Get collision free path from the cars proximity sensor
-                    pathPos = proxSensor.GetOptimalPathToPosition(transform.position, targetPos);
+                // DEBUG CODE: Set the visualizer for the current arbitrary path
+                followBall.position = pathPos;
 
-                    // DEBUG CODE: Set the visualizer for the current arbitrary path
-                    followBall.position = pathPos;
+                distToGoal = Vector3.Distance(transform.position, targetPos);
+                angleToGoal = Vector3.Angle(pathPos - transform.position, transform.forward);
 
-                    distToGoal = Vector3.Distance(transform.position, targetPos);
-                    angleToGoal = Vector3.Angle(pathPos - transform.position, transform.forward);
-
+                if (wiggleCount < wiggleTarget)
+                {
                     if (carMotor.IsAboveBrakeVelocity() && proxSensor.HasObjectInFront(transform))
                     {
-                        Debug.Log("BRAKING");
                         lastInput = LastInputType.brake;
                         carMotor.Brake();
                     }
                     else
                     {
+                        // If the AI is not stuck in a local minima, then proceed with regular movement logic
+
                         if (angleToGoal > angleTreshold)
                         {
                             steerPos = transform.InverseTransformPoint(pathPos);
-                            
+
                             if (steerPos.z > 0)
                             {
                                 if (steerPos.x > 0.2f)
@@ -153,47 +164,17 @@ public class CarAI : MonoBehaviour {
                             }
                             else
                             {
-                                // If the object is behind the car, Steer Right or Left accordingly
-                                if (wiggleCount < wiggleTarget)
+                                if (steerPos.x >= 0f)
                                 {
-                                    if (steerPos.x >= 0f)
-                                    {
-                                        CheckForWiggles(LastInputType.right);
-                                        lastInput = LastInputType.right;
-                                        carMotor.TurnRight();
-                                    }
-                                    else
-                                    {
-                                        CheckForWiggles(LastInputType.left);
-                                        lastInput = LastInputType.left;
-                                        carMotor.TurnLeft();
-                                    }
+                                    CheckForWiggles(LastInputType.right);
+                                    lastInput = LastInputType.right;
+                                    carMotor.TurnRight();
                                 }
                                 else
                                 {
-                                    //Try to escape from local minima
-                                    if (lastInput == LastInputType.right)
-                                    {
-                                        if (!proxSensor.HasObjectInFront(transform))
-                                        {
-                                            carMotor.GoForward();
-                                        }
-                                        else
-                                        {
-                                            carMotor.TurnLeft();
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!proxSensor.HasObjectInFront(transform))
-                                        {
-                                            carMotor.GoForward();
-                                        }
-                                        else
-                                        {
-                                            carMotor.TurnLeft();
-                                        }
-                                    }
+                                    CheckForWiggles(LastInputType.left);
+                                    lastInput = LastInputType.left;
+                                    carMotor.TurnLeft();
                                 }
                             }
                         }
@@ -205,28 +186,28 @@ public class CarAI : MonoBehaviour {
                             carMotor.GoForward();
                         }
                     }
-                    break;
-                case CarState.Fail:
-                    stateText.text = "Failed";
-                    break;
-            }
+                }
+                else //If the AI is stuck in a local minima, record the local minima location
+                {
+                    proxSensor.RecordLocalMinimaAtPosition(transform.position);
+                    wiggleCount = 0;
+                }
+                break;
+            case CarState.Idle:
+                if (collectionComplete)
+                {
+                    stateText.text = "Collected all known objects!";
+                }
+                else if (ranOutOfTime)
+                {
+                    stateText.text = "Ran out of time!";
+                }
+                else
+                {
+                    stateText.text = "AI is in Idle mode";
+                }
+                break;
         }
-	}
-
-    // Check if the car is upside down
-    private void CheckForFailures()
-    {
-        //if (Time.time - lastFailCheck >= failCheckInterval)
-        //{
-        //    Ray rayUp = new Ray(transform.position, transform.up);
-
-        //    if (Physics.Raycast(rayUp,1) && rBody.velocity.magnitude < 0.1f)
-        //    {
-        //        currentState = CarState.Fail;
-        //    }
-
-        //    lastFailCheck = Time.time;
-        //}
     }
 
     private void CheckForWiggles(LastInputType currentInput)
@@ -279,7 +260,7 @@ public class CarAI : MonoBehaviour {
     // Called when the camera finds a goal object
     public void FoundGoal(GameObject goalObject)
     {
-        if (currentState != CarState.Goal)
+        if (currentState != CarState.Goal) //If the car is idling but manages to spot a missed goal object, set it as current goal and move towards it (EDGE CASE)
         {
             currentGoal = goalObject.transform;
             targetPos = currentGoal.position;
@@ -287,7 +268,7 @@ public class CarAI : MonoBehaviour {
 
             lastTargetSwitch = Time.time;
         }
-        else if (currentState == CarState.Goal)
+        else if (currentState == CarState.Goal) //If we already have a goal but we detect another goal object
         {
             if (Time.time - lastTargetSwitch > targetSwitchTimer)
             {
@@ -315,15 +296,16 @@ public class CarAI : MonoBehaviour {
 
             points++; //Increment points
             pointsText.text = points.ToString(); //Update points display
-
-            currentState = CarState.Search; //Return to search state
         }
     }
+    //Detect if the AI collides with an obstacle
     private void OnCollisionEnter(Collision collision)
     {
         if(collision.gameObject.tag != "Goal" && collision.gameObject.name != "Terrain")
         {
             Debug.Log("COLLIDED WITH " + collision.gameObject.name);
+            collisions++;
+            collisionsText.text = collisions.ToString();
         }
     }
 }
