@@ -22,6 +22,8 @@ public class CarAI : MonoBehaviour {
 
     public AreaProximitySensorBehaviour proxSensor;
 
+    public bool recordLocalMinima = true;
+
     private Vector3 initPos;
     private float mapSize = 500;
 
@@ -55,7 +57,7 @@ public class CarAI : MonoBehaviour {
 
     private bool collectionComplete = false;
     private bool ranOutOfTime = false;
-
+    
     private enum LastInputType
     {
         forward,
@@ -189,7 +191,10 @@ public class CarAI : MonoBehaviour {
                 }
                 else //If the AI is stuck in a local minima, record the local minima location
                 {
-                    proxSensor.RecordLocalMinimaAtPosition(transform.position);
+                    if (recordLocalMinima)
+                    {
+                        proxSensor.RecordLocalMinimaAtPosition(transform.position);
+                    }
                     wiggleCount = 0;
                 }
                 break;
@@ -276,7 +281,6 @@ public class CarAI : MonoBehaviour {
                 float newDistance = Vector3.Distance(transform.position, goalObject.transform.position);
                 if (newDistance < distToGoal)
                 {
-                    Debug.Log("Switched targets!");
                     currentGoal = goalObject.transform;
                     targetPos = currentGoal.position;
                     currentState = CarState.Goal;
