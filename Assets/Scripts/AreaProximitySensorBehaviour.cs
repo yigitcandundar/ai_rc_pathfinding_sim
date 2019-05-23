@@ -10,6 +10,8 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
     // List of detected objects inside the proximity
     private List<Collider> collisions = new List<Collider>();
+
+    //List of all recorder local minima sections within a simulation session
     private List<Vector3> minimaPositions = new List<Vector3>();
 
     [SerializeField]
@@ -52,10 +54,7 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
         // Direction away from the current position and current proximity objects
         Vector3 directionFromCollision = Vector3.zero;
-
-        // A list of rays to every object in proximity (FOR DEBUGGING PURPOSES)
-        List<Ray> raysToEverything = new List<Ray>();
-
+        
         // The float sum of distance
         float distanceSum = 0.0f;
         int criticalCollisionsCount = 0;
@@ -101,7 +100,7 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
             }
         }
 
-        //Check if a recorder local minima is close by
+        //Check if a recorded local minima is close by
         foreach(Vector3 localMinima in minimaPositions)
         {
             float distanceToLocalMinima = Vector3.Distance(fromPosition, localMinima);
@@ -211,6 +210,8 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
 
         return result;
     }
+
+    //Returns true if there are either 3 or more obstacles in proximity or if there are less than 3 obstacles, checks if any obstacle is in critical distance then returns true again
     public bool HasObjectInCloseProximity(Vector3 fromPosition)
     {
         if (collisions.Count >= 3)
@@ -227,7 +228,7 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
                 // Calculate distance to the proximity object
                 float distanceToCollision = Vector3.Distance(fromPosition, closestPoint);
 
-                // If the distance to current proximity object is dangerously close, amplify the direction and contribute to the actual path calculation
+                // If the distance to current proximity object is dangerously close, return true
                 if (distanceToCollision <= minDistance)
                 {
                     return true;
@@ -238,8 +239,24 @@ public class AreaProximitySensorBehaviour : MonoBehaviour {
         return false;
     }
 
+    //Called when a local minima is detected to record the local minima and include it in the path finding process
     public void RecordLocalMinimaAtPosition(Vector3 localMinimaPosition)
     {
-        minimaPositions.Add(localMinimaPosition);
+        bool isDuplicate = false;
+
+        //Check if the minima is a duplicate
+        foreach(Vector3 localMinima in minimaPositions)
+        {
+            if (Vector3.Distance(localMinima, localMinimaPosition) < minDistance)
+            {
+                isDuplicate = true;
+            }
+        }
+
+        //If this local minima is a new one, then add it to the list
+        if (!isDuplicate)
+        {
+            minimaPositions.Add(localMinimaPosition);
+        }
     }
 }
