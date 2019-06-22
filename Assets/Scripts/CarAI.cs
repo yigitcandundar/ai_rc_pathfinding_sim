@@ -16,6 +16,7 @@ public class CarAI : MonoBehaviour {
     public Text pointsText;
     public Text collisionsText;
     public Text timerText;
+    public Text timerTitleText;
 
     public MotorBehaviour carMotor;
     public GoalManager gManager;
@@ -33,6 +34,8 @@ public class CarAI : MonoBehaviour {
 
     private int points = 0;
     private int collisions = 0;
+    private int localMinimas = 0;
+
     private float timer = 0;
     private float maxTime = 300;
 
@@ -57,7 +60,17 @@ public class CarAI : MonoBehaviour {
 
     private bool collectionComplete = false;
     private bool ranOutOfTime = false;
-    
+    private bool printedResults = false;
+
+    //SET THIS TO TRUE WHEN THE TIMER NEEDS TO COUNT DOWN (CAR CAN FAIL IF IT RUNS OUT OF TIME)
+    //SET IT TO FALSE TO RECORD THE TOTAL TIME TAKEN FOR THE CAR TO FINISH THE RUN (CAR CANNOT FAIL THE RUN)
+    private bool restrictTime = false;
+
+    private float currentTime = 0.0f;
+
+    private Vector3 pastPosition = Vector3.zero;
+    private float totalDistanceTravelled = 0.0f;
+
     private enum LastInputType
     {
         forward,
@@ -98,16 +111,26 @@ public class CarAI : MonoBehaviour {
 
         if (!stopTimer)
         {
-            if (Time.time - timer >= maxTime)
+            if (restrictTime) //If true the time limit will be forced and the AI might fail the test if it runs out of time
             {
-                timerText.text = "0";
-                collectionComplete = false;
-                ranOutOfTime = true;
-                currentState = CarState.Idle;
+                timerTitleText.text = "Remaining Time:";
+                if (Time.time - timer >= maxTime)
+                {
+                    timerText.text = "0";
+                    collectionComplete = false;
+                    ranOutOfTime = true;
+                    currentState = CarState.Idle;
+                }
+                else
+                {
+                    timerText.text = (maxTime - (Time.time - timer)).ToString("F2");
+                }
             }
-            else
+            else // Else the time it takes to complete the run is recorded
             {
-                timerText.text = (maxTime - (Time.time - timer)).ToString("F2");
+                timerTitleText.text = "Time Taken:";
+                currentTime += Time.deltaTime;
+                timerText.text = currentTime.ToString("F2");
             }
         }
         
@@ -124,6 +147,16 @@ public class CarAI : MonoBehaviour {
 
                 distToGoal = Vector3.Distance(transform.position, targetPos);
                 angleToGoal = Vector3.Angle(pathPos - transform.position, transform.forward);
+
+                if (pastPosition != Vector3.zero)
+                {
+                    totalDistanceTravelled += Vector3.Distance(transform.position, pastPosition);
+                    pastPosition = transform.position;
+                }
+                else
+                {
+                    pastPosition = transform.position;
+                }
 
                 if (wiggleCount < wiggleTarget)
                 {
@@ -191,6 +224,8 @@ public class CarAI : MonoBehaviour {
                 }
                 else //If the AI is stuck in a local minima, record the local minima location
                 {
+                    localMinimas++;
+
                     if (recordLocalMinima)
                     {
                         proxSensor.RecordLocalMinimaAtPosition(transform.position);
@@ -201,6 +236,20 @@ public class CarAI : MonoBehaviour {
             case CarState.Idle:
                 if (collectionComplete)
                 {
+                    if (!printedResults)
+                    {
+                        if (restrictTime)
+                        {
+                            Debug.Log("Points: " + points + " - Collisions: " + collisions + " - Local Minima: " + localMinimas);
+                        }
+                        else
+                        {
+                            Debug.Log("Time taken(s): " + currentTime + " - Total Distance Travelled(u): " + totalDistanceTravelled + " - Points: " + points + " - Collisions: " + collisions + " - Local Minima: " + localMinimas);
+                        }
+
+                        printedResults = true;
+                    }
+
                     stateText.text = "Collected all known objects!";
                 }
                 else if (ranOutOfTime)

@@ -1974,6 +1974,11 @@ Prefab:
       propertyPath: m_CullingMask.m_Bits
       value: 823
       objectReference: {fileID: 0}
+    - target: {fileID: 114661722766124706, guid: 4bb4e12ea47ff6d4a81824c8a8479320,
+        type: 2}
+      propertyPath: recordLocalMinima
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4bb4e12ea47ff6d4a81824c8a8479320, type: 2}
   m_IsPrefabAsset: 0
