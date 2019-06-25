@@ -236,7 +236,7 @@ Light:
   m_SpotAngle: 30
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 1
+    m_Type: 0
     m_Resolution: 1
     m_CustomResolution: -1
     m_Strength: 0.418
@@ -510,6 +510,28 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 296932739}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &361311097 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1372001829462928, guid: 98865a3eece113b4b805092fe43087ae,
+    type: 2}
+  m_PrefabInternal: {fileID: 1643098139}
+--- !u!4 &361311098 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae,
+    type: 2}
+  m_PrefabInternal: {fileID: 1643098139}
+--- !u!135 &361311099
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 361311097}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &373061363
 GameObject:
   m_ObjectHideFlags: 0
@@ -784,11 +806,11 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
       propertyPath: m_RootOrder
-      value: 3
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1372001829462928, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
       propertyPath: m_Name
-      value: GoalSphere (3)
+      value: GoalSphere (4)
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 135406429925553998, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
@@ -1977,8 +1999,13 @@ Prefab:
     - target: {fileID: 114661722766124706, guid: 4bb4e12ea47ff6d4a81824c8a8479320,
         type: 2}
       propertyPath: recordLocalMinima
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 114661722766124706, guid: 4bb4e12ea47ff6d4a81824c8a8479320,
+        type: 2}
+      propertyPath: timerTitleText
+      value: 
+      objectReference: {fileID: 1568643258}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4bb4e12ea47ff6d4a81824c8a8479320, type: 2}
   m_IsPrefabAsset: 0
@@ -2728,6 +2755,7 @@ Transform:
   - {fileID: 1763286276}
   - {fileID: 1200382200}
   - {fileID: 1982566886}
+  - {fileID: 361311098}
   - {fileID: 1376243468}
   m_Father: {fileID: 1729048290}
   m_RootOrder: 1
@@ -2744,6 +2772,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   goals: []
+  carTransform: {fileID: 82639497}
 --- !u!1 &1376243467 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1372001829462928, guid: 98865a3eece113b4b805092fe43087ae,
@@ -3349,6 +3378,53 @@ Prefab:
     - target: {fileID: 1372001829462928, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
       propertyPath: m_Name
       value: GoalSphere (2)
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 135406429925553998, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+  m_SourcePrefab: {fileID: 100100000, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+  m_IsPrefabAsset: 0
+--- !u!1001 &1643098139
+Prefab:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 1371614005}
+    m_Modifications:
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalPosition.x
+      value: 7.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalPosition.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalPosition.z
+      value: 82.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4751664148967950, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_RootOrder
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1372001829462928, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
+      propertyPath: m_Name
+      value: GoalSphere (3)
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 135406429925553998, guid: 98865a3eece113b4b805092fe43087ae, type: 2}
